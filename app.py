@@ -314,33 +314,6 @@ if __name__ == "__main__":
     init_db()           # create DB tables on first run
     print("\n🚀  Trading App running at http://localhost:5000\n")
     port = int(os.environ.get("PORT", 5000))
-app.run(host="0.0.0.0", port=port, debug=False)
-```
+    app.run(host="0.0.0.0", port=port, debug=False)
 
-Click **"Commit changes"** ✅
 
----
-
-## Step 3 — Deploy on Railway
-
-1. Go to 👉 **https://railway.app**
-2. Click **"Login"** → **"Login with GitHub"**
-3. Authorize Railway
-4. Click **"New Project"**
-5. Click **"Deploy from GitHub repo"**
-6. Select **"Loganthan16/Learntrade"**
-7. Click **"Deploy Now"**
-
-Wait 2 minutes for build to finish ⏳
-
----
-
-## Step 4 — Get your live URL
-
-1. Click your project on Railway
-2. Click **"Settings"** tab
-3. Scroll to **"Domains"**
-4. Click **"Generate Domain"**
-5. Copy the URL like:
-```
-https://learntrade-production.up.railway.app
