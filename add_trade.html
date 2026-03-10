@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Add Trade{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Add Trade</h1>
+    <p class="page-sub">Record a new trade entry in your journal</p>
+  </div>
+</div>
+
+<div class="form-layout">
+  <form action="{{ url_for('add_trade') }}" method="POST" id="tradeForm">
+
+    <!-- ── Stock Info ───────────────────────────────────────────────────── -->
+    <div class="form-section">
+      <h2 class="form-section-title">📊 Trade Details</h2>
+      <div class="form-grid">
+
+        <div class="form-group span-2">
+          <label class="form-label" for="stock_name">Stock Name / Symbol</label>
+          <input class="form-input" type="text" id="stock_name" name="stock_name"
+            placeholder="e.g. RELIANCE, NIFTY50, TATAMOTORS"
+            required maxlength="20" />
+          <span class="form-hint">NSE/BSE symbol. Will be auto-uppercased.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="trade_type">Trade Type</label>
+          <select class="form-input" id="trade_type" name="trade_type">
+            <option value="Intraday">Intraday (same day)</option>
+            <option value="Swing">Swing (multi-day)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="trade_date">Trade Date</label>
+          <input class="form-input" type="date" id="trade_date" name="trade_date"
+            value="{{ today }}" required />
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Price Info ───────────────────────────────────────────────────── -->
+    <div class="form-section">
+      <h2 class="form-section-title">💰 Price & Quantity</h2>
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label class="form-label" for="buy_price">Buy Price (₹)</label>
+          <input class="form-input mono" type="number" id="buy_price" name="buy_price"
+            placeholder="0.00" step="0.01" min="0.01" required />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sell_price">Sell Price (₹) <span class="optional">(optional)</span></label>
+          <input class="form-input mono" type="number" id="sell_price" name="sell_price"
+            placeholder="Leave blank if trade still open" step="0.01" min="0" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="quantity">Quantity (shares)</label>
+          <input class="form-input mono" type="number" id="quantity" name="quantity"
+            placeholder="e.g. 10" min="1" required />
+        </div>
+
+        <!-- live P&L preview -->
+        <div class="form-group">
+          <label class="form-label">Estimated P&amp;L</label>
+          <div class="pnl-preview" id="pnlPreview">—</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Psychology ──────────────────────────────────────────────────── -->
+    <div class="form-section">
+      <h2 class="form-section-title">🧠 Trading Psychology</h2>
+      <div class="form-grid">
+
+        <div class="form-group span-2">
+          <label class="form-label" for="reason">Reason for Trade</label>
+          <textarea class="form-input" id="reason" name="reason" rows="3"
+            placeholder="Why did you take this trade? (e.g. Breakout above resistance, EMA crossover, news catalyst...)"></textarea>
+        </div>
+
+        <div class="form-group span-2">
+          <label class="form-label" for="emotion">Emotion During Trade</label>
+          <div class="emotion-pills" id="emotionPills">
+            {% set emotions = ["Calm", "Confident", "Anxious", "Greedy", "Fearful", "FOMO", "Excited", "Neutral"] %}
+            {% for e in emotions %}
+              <button type="button" class="pill" data-value="{{ e }}">{{ e }}</button>
+            {% endfor %}
+          </div>
+          <input type="hidden" id="emotion" name="emotion" />
+          <span class="form-hint">Click to select your dominant emotion. Self-awareness = better trading.</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Beginner tip box -->
+    <div class="tip-box">
+      <span class="tip-icon">💡</span>
+      <div>
+        <strong>Beginner Tip:</strong> Always write down WHY you took the trade. Looking back at your reasons
+        helps you spot patterns — both good habits and costly mistakes.
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a href="{{ url_for('journal') }}" class="btn btn-ghost">Cancel</a>
+      <button type="submit" class="btn btn-primary">Save Trade →</button>
+    </div>
+
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Live P&L Preview ────────────────────────────────────────────────────────
+const buyInput  = document.getElementById("buy_price");
+const sellInput = document.getElementById("sell_price");
+const qtyInput  = document.getElementById("quantity");
+const preview   = document.getElementById("pnlPreview");
+
+function updatePreview() {
+  const buy  = parseFloat(buyInput.value)  || 0;
+  const sell = parseFloat(sellInput.value) || 0;
+  const qty  = parseInt(qtyInput.value)    || 0;
+
+  if (buy > 0 && sell > 0 && qty > 0) {
+    const pnl = (sell - buy) * qty;
+    preview.textContent = (pnl >= 0 ? "+" : "") + "₹" + pnl.toFixed(2);
+    preview.className   = "pnl-preview " + (pnl >= 0 ? "text-green" : "text-red");
+  } else {
+    preview.textContent = "—";
+    preview.className   = "pnl-preview";
+  }
+}
+
+buyInput.addEventListener("input", updatePreview);
+sellInput.addEventListener("input", updatePreview);
+qtyInput.addEventListener("input", updatePreview);
+
+// ── Emotion Pill Selector ────────────────────────────────────────────────────
+const pills        = document.querySelectorAll(".pill");
+const emotionInput = document.getElementById("emotion");
+
+pills.forEach(pill => {
+  pill.addEventListener("click", () => {
+    pills.forEach(p => p.classList.remove("pill--active"));
+    pill.classList.add("pill--active");
+    emotionInput.value = pill.dataset.value;
+  });
+});
+</script>
+{% endblock %}
