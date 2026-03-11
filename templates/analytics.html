@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Analytics</h1>
+    <p class="page-sub">Understand your trading patterns deeply</p>
+  </div>
+</div>
+
+<!-- ── Summary KPIs ───────────────────────────────────────────────────────── -->
+<div class="kpi-grid kpi-grid--6">
+
+  <div class="kpi-card">
+    <div class="kpi-label">Total Trades</div>
+    <div class="kpi-value mono">{{ total }}</div>
+  </div>
+
+  <div class="kpi-card kpi-card--green">
+    <div class="kpi-label">Wins</div>
+    <div class="kpi-value mono text-green">{{ wins }}</div>
+  </div>
+
+  <div class="kpi-card kpi-card--red">
+    <div class="kpi-label">Losses</div>
+    <div class="kpi-value mono text-red">{{ losses }}</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Win Rate</div>
+    <div class="kpi-value mono {% if win_rate >= 50 %}text-green{% else %}text-red{% endif %}">{{ win_rate }}%</div>
+  </div>
+
+  <div class="kpi-card kpi-card--green">
+    <div class="kpi-label">Avg Profit</div>
+    <div class="kpi-value mono text-green">+₹{{ "%.2f"|format(avg_profit) }}</div>
+  </div>
+
+  <div class="kpi-card kpi-card--red">
+    <div class="kpi-label">Avg Loss</div>
+    <div class="kpi-value mono text-red">₹{{ "%.2f"|format(avg_loss) }}</div>
+  </div>
+
+</div>
+
+<!-- ── Charts Row ─────────────────────────────────────────────────────────── -->
+<div class="two-col-grid" style="margin-top:1.5rem">
+
+  <!-- Cumulative P&L curve -->
+  <div class="card">
+    <div class="card-header">
+      <span>Cumulative P&amp;L Curve</span>
+      <span class="badge">All Time</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="cumulChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Win / Loss pie -->
+  <div class="card">
+    <div class="card-header">
+      <span>Win / Loss Ratio</span>
+    </div>
+    <div class="chart-wrap chart-wrap--sm">
+      <canvas id="pieChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Best Stocks + Emotion ──────────────────────────────────────────────── -->
+<div class="two-col-grid" style="margin-top:1.5rem">
+
+  <!-- Top stocks -->
+  <div class="card">
+    <div class="card-header"><span>Top Performing Stocks</span></div>
+    {% if top_stocks %}
+      <ul class="rank-list">
+        {% for s in top_stocks %}
+          <li class="rank-item">
+            <span class="rank-num">{{ loop.index }}</span>
+            <span class="rank-name mono stock-name">{{ s.stock_name }}</span>
+            <span class="rank-count muted">{{ s.cnt }} trades</span>
+            <span class="rank-pnl mono {% if s.total_pnl >= 0 %}text-green{% else %}text-red{% endif %}">
+              {% if s.total_pnl >= 0 %}+{% endif %}₹{{ "%.2f"|format(s.total_pnl) }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">No data yet.</div>
+    {% endif %}
+  </div>
+
+  <!-- Emotion impact -->
+  <div class="card">
+    <div class="card-header">
+      <span>Emotion vs Avg P&amp;L</span>
+      <span class="badge">Psychology</span>
+    </div>
+    {% if emotion_data %}
+      <ul class="rank-list">
+        {% for e in emotion_data %}
+          <li class="rank-item">
+            <span class="emotion-chip">{{ e.emotion }}</span>
+            <span class="rank-count muted">{{ e.cnt }} trades</span>
+            <span class="rank-pnl mono {% if e.avg_pnl >= 0 %}text-green{% else %}text-red{% endif %}">
+              avg {% if e.avg_pnl >= 0 %}+{% endif %}₹{{ "%.2f"|format(e.avg_pnl) }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="tip-box" style="margin:1rem">
+        <span class="tip-icon">🧠</span>
+        Your emotions directly impact your P&L. Trade with calm &amp; confidence for best results.
+      </div>
+    {% else %}
+      <div class="empty-state">Record emotions when adding trades to see insights.</div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ── Best / Worst + Trade Type ─────────────────────────────────────────── -->
+<div class="two-col-grid" style="margin-top:1.5rem">
+
+  <div class="card">
+    <div class="card-header"><span>Extremes</span></div>
+    <div class="extremes-grid">
+      <div class="extreme-item extreme-item--good">
+        <div class="extreme-label">🏆 Best Trade</div>
+        <div class="extreme-val mono text-green">+₹{{ "%.2f"|format(best_trade) }}</div>
+      </div>
+      <div class="extreme-item extreme-item--bad">
+        <div class="extreme-label">💀 Worst Trade</div>
+        <div class="extreme-val mono text-red">₹{{ "%.2f"|format(worst_trade) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span>Intraday vs Swing</span></div>
+    {% if type_data %}
+      <ul class="rank-list">
+        {% for td in type_data %}
+          <li class="rank-item">
+            <span class="tag tag--{{ td.trade_type|lower }}">{{ td.trade_type }}</span>
+            <span class="rank-count muted">{{ td.cnt }} trades</span>
+            <span class="rank-pnl mono {% if td.total_pnl >= 0 %}text-green{% else %}text-red{% endif %}">
+              {% if td.total_pnl >= 0 %}+{% endif %}₹{{ "%.2f"|format(td.total_pnl) }}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="empty-state">No data yet.</div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Cumulative P&L line chart ────────────────────────────────────────────────
+const cumDates = {{ cum_dates | tojson }};
+const cumData  = {{ cum_pnl   | tojson }};
+
+if (cumDates.length) {
+  const finalVal = cumData[cumData.length - 1];
+  const lineColor = finalVal >= 0 ? "#00dc82" : "#ff5050";
+
+  new Chart(document.getElementById("cumulChart"), {
+    type: "line",
+    data: {
+      labels: cumDates,
+      datasets: [{
+        label: "Cumulative P&L",
+        data: cumData,
+        borderColor: lineColor,
+        backgroundColor: lineColor + "18",
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: lineColor,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ` ₹${c.parsed.y.toFixed(2)}` } }
+      },
+      scales: {
+        x: { ticks: { color: "#8891a4", font: { size: 10 } }, grid: { color: "#1e2530" } },
+        y: { ticks: { color: "#8891a4" }, grid: { color: "#1e2530" } },
+      }
+    }
+  });
+} else {
+  document.getElementById("cumulChart").closest(".chart-wrap").innerHTML =
+    `<div class="empty-state">Add trades to see your P&L curve.</div>`;
+}
+
+// ── Win/Loss pie ──────────────────────────────────────────────────────────────
+const wins   = {{ wins }};
+const losses = {{ losses }};
+
+if (wins + losses > 0) {
+  new Chart(document.getElementById("pieChart"), {
+    type: "doughnut",
+    data: {
+      labels: ["Wins", "Losses"],
+      datasets: [{
+        data: [wins, losses],
+        backgroundColor: ["rgba(0,220,130,0.8)", "rgba(255,80,80,0.8)"],
+        borderColor: ["#00dc82", "#ff5050"],
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: "65%",
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: { color: "#c4cad6", font: { size: 13 } }
+        }
+      }
+    }
+  });
+} else {
+  document.getElementById("pieChart").closest(".chart-wrap").innerHTML =
+    `<div class="empty-state">No closed trades yet.</div>`;
+}
+</script>
+{% endblock %}
